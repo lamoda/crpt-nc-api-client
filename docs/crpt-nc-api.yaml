@@ -1,0 +1,654 @@
+openapi: 3.0.0
+info:
+  title: Национальный каталог
+  description: API
+  version: 3.0.0
+
+servers:
+  - url: https://api.integrators.nk.crpt.tech/v3/
+    description: Тестовый стенд
+  - url: https://апи.национальный-каталог.рф/v3/
+    description: Продуктивный стенд
+
+security:
+  - ApiKeyAuth: [ ]
+
+paths:
+
+  /generate-gtins:
+    get:
+      tags:
+        - crpt-nc
+      description: Генерирует черновики GTIN и возвращает их
+      parameters:
+        - name: quantity
+          in: query
+          description: >
+            количество новых черновиков GTIN, которые нужно сгенерировать
+            (обязателен при запросе генерации новых черновиков gtin)
+          schema:
+            { type: integer }
+        - name: exist
+          in: query
+          description: >
+            признак, обозначающий запрос уже сгенерированных и имеющихся в базе
+            пользователя gtin; принимает значения 1/0 (true/false)
+          schema:
+            { type: boolean }
+        - name: supplier_key
+          in: query
+          description: >
+            ключ поставщика или производителя товаров (необязательный параметр)
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateGtinsResponse"
+        "304": { description: "Страница не изменилась" }
+        "400": { description: "Ошибка в параметрах запроса" }
+        "401": { description: "Не авторизован, в запросе отсутствует apikey" }
+        "403": { description: "Нет доступа к запрашиваемой информации" }
+        "404": { description: "Запрашиваемая информация не найдена" }
+        "413": { description: "Размер запроса превышает лимит" }
+        "429": { description: "Превышен лимит запросов к API, в HTTP заголовке Retry-After передаетсявремя до начала предоставления доступа в секундах" }
+        "500": { description: "Внутренняя ошибка сервера" }
+        "501": { description: "Метод не существует" }
+        "503": { description: "Сервис недоступен, техническое обслуживание, повторите запрос позже" }
+
+  /feed:
+    post:
+      tags:
+        - crpt-nc
+      description: >
+        Дает возможность компаниям - владельцам товаров создавать и обновлять
+        карточки товаров.
+        Создание и обновленние карточек товаров осуществляется при помощи
+        фидов - пакетов обновлений, формируемых на стороне пользователя.
+        Метод возвращает feed_id (идентификатор полученного фида) или ошибку
+        Ограничения
+        Размер фида - 25 МБ
+        Количество товаров в фиде - 5000
+        При привышении лимита на размер фида или на количество товаров в фиде
+        будет вызвана ошибка с кодом 413
+        При ошибке в схеме данных будет получена ошибка с кодом 400
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedResponse"
+        "304": { description: "Страница не изменилась" }
+        "400": { description: "Ошибка в параметрах запроса" }
+        "401": { description: "Не авторизован, в запросе отсутствует apikey" }
+        "403": { description: "Нет доступа к запрашиваемой информации" }
+        "404": { description: "Запрашиваемая информация не найдена" }
+        "413": { description: "Размер запроса превышает лимит" }
+        "429": { description: "Превышен лимит запросов к API, в HTTP заголовке Retry-After передается время до начала предоставления доступа в секундах" }
+        "500": { description: "Внутренняя ошибка сервера" }
+        "501": { description: "Метод не существует" }
+        "503": { description: "Сервис недоступен, техническое обслуживание, повторите запрос позже" }
+
+  /feed-status:
+    get:
+      tags:
+        - crpt-nc
+      description: >
+        Метод предназначен для проверки статуса ранее отправленного пакета
+        обновлений (фида).
+        Результат возможно получить только для тех фидов, которые были
+        отправлены компанией (лабораторией).
+      parameters:
+        - name: feed_id
+          description: идентификатор фида (обязательное)
+          in: query
+          schema: { type: integer }
+          required: true
+        - name: verbose
+          description: >
+            формат ответа (необязательный). Может принимать следующие значения
+            false или отсутствует — в ответ выводится стандартный блок ошибок
+            обработки фида(обязательное) true — в ответ будет выведен
+            расширенный ответ по произошедшим ошибкам обработки фида
+          in: query
+          schema: { type: boolean }
+          required: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedStatusResponse"
+        "304": { description: "Страница не изменилась" }
+        "400": { description: "Ошибка в параметрах запроса" }
+        "401": { description: "Не авторизован, в запросе отсутствует apikey" }
+        "403": { description: "Нет доступа к запрашиваемой информации" }
+        "404": { description: "Запрашиваемая информация не найдена" }
+        "413": { description: "Размер запроса превышает лимит" }
+        "429": { description: "Превышен лимит запросов к API, в HTTP заголовке Retry-After передается время до начала предоставления доступа в секундах" }
+        "500": { description: "Внутренняя ошибка сервера" }
+        "501": { description: "Метод не существует" }
+        "503": { description: "Сервис недоступен, техническое обслуживание, повторите запрос позже" }
+
+  /feed-product-document:
+    post:
+      tags:
+        - crpt-nc
+      description: >
+        Метод возвращает XML товаров для подписи по good_id или GTIN с указанием
+        согласия на публикацию.
+        Максимальное количество товарных позиций в запросе
+        не должно превышать 25.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedProductDocumentRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedProductDocumentResponse"
+        "304": { description: "Страница не изменилась" }
+        "400": { description: "Ошибка в параметрах запроса" }
+        "401": { description: "Не авторизован, в запросе отсутствует apikey" }
+        "403": { description: "Нет доступа к запрашиваемой информации" }
+        "404": { description: "Запрашиваемая информация не найдена" }
+        "413": { description: "Размер запроса превышает лимит" }
+        "429": { description: "Превышен лимит запросов к API, в HTTP заголовке Retry-After передается время до начала предоставления доступа в секундах" }
+        "500": { description: "Внутренняя ошибка сервера" }
+        "501": { description: "Метод не существует" }
+        "503": { description: "Сервис недоступен, техническое обслуживание, повторите запрос позже" }
+
+  /feed-product-sign-pkcs:
+    post:
+      tags:
+        - crpt-nc
+      description: >
+        Метод предназначен для подписи карточки товара или (нескольких карточек)
+        с помощью сертификата в формате PKCS#7.
+        Отличается от метода feed-product-sign тем, что из содержимого карточки
+        товара в формате XML исключается подпись,
+        которая при использовании текущего метода передается отдельным
+        параметром в запросе. Данные кодируются в base64.
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/FeedProductSignPkcsRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedProductSignPkcsResponse"
+        "304": { description: "Страница не изменилась" }
+        "400": { description: "Ошибка в параметрах запроса" }
+        "401": { description: "Не авторизован, в запросе отсутствует apikey" }
+        "403": { description: "Нет доступа к запрашиваемой информации" }
+        "404": { description: "Запрашиваемая информация не найдена" }
+        "413": { description: "Размер запроса превышает лимит" }
+        "429": { description: "Превышен лимит запросов к API, в HTTP заголовке Retry-After передается время до начала предоставления доступа в секундах" }
+        "500": { description: "Внутренняя ошибка сервера" }
+        "501": { description: "Метод не существует" }
+        "503": { description: "Сервис недоступен, техническое обслуживание, повторите запрос позже" }
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: query
+      name: apikey
+
+  schemas:
+    GenerateGtinsResponse:
+      properties:
+        apiversion:
+          type: integer
+        result:
+          type: object
+          properties:
+            "monthly-limit":
+              description: ежемесячное ограничение
+              type: object
+              properties:
+                limit:
+                  description: >
+                    общее количество черновиков GTIN, доступных для генерации,
+                    в течении одного месяца
+                  type: integer
+                usage:
+                  description: >
+                    количество черновиков GTIN, которые уже были сгенерированы,
+                    в течении этого месяца
+                  type: integer
+            drafts:
+              description: список черновиков
+              type: array
+              items:
+                type: object
+                properties:
+                  gtin:
+                    description: GTIN, которые были сгенерированы
+                    type: string
+
+    FeedRequest:
+      description: >
+        Для изменения существующего товара должно быть передано значение его
+        идентификатора good_id.
+        Если параметра good_id нет, товар определяется как новый
+        Для нового товара обязательным является параметр good_name и gtin
+      properties:
+        "@id":
+          description: >
+            идентификатор энтри, который лаборатория может задать для более
+            конкретной идентификации ответа (необязательный)
+          type: string
+        good_id:
+          description: идентификатор товара (обязательный для обновляемых товаров)
+          type: string
+        gtin:
+          description: >
+            идентификатор в Национальном каталоге товаров GTIN
+            (обязательный для нового товара)
+          type: string
+        is_tech_gtin:
+          description: >
+            признак создания карточки товара с техническим gtin;
+            принимает значения 1/0 (true/false) (обязателен при создании карточки
+            товара с техническим GTIN, в этом случае GTIN в энтри не указывается)
+          type: string
+        is_kit:
+          description: >
+            признак создания комплекта; принимает значения 1/0 (true/false)
+            (обязателен при создании карточки товара, являющегося комплектом)
+          type: string
+        good_name:
+          description: наименование товара (обязательный для нового товара)
+          type: string
+        tnved:
+          description: ТН ВЭД (обязательный для нового товара)
+          type: string
+        brand:
+          description: товарный знак (обязательный для нового товара)
+          type: string
+        moderation:
+          description: >
+            признак отправки товара на модерацию (не обязательный)
+            1 — товар отправляется на модерацию, карточка создается в статусе
+            «На модерации»
+            0 или не указан — товар на модерацию не отправляется, карточка
+            создается в статусе «Черновик»
+          type: string
+        identified_by:
+          description: >
+            массив идентификаторов (если создается карточка товара с GTIN,
+            относящимся к упаковке типа trade-unit, то массив идентификаторов
+            обязательно должен включать как минимум идентифкатор данного вида
+            упаковки)
+          type: array
+          items:
+            type: object
+            required:
+              - type
+              - value
+              - level
+              - multiplier
+            properties:
+              type:
+                description: >
+                  тип идентификатора (обязательный). Возможные значения
+                  gtin — GTIN (обязателен для каждого типа упаковки)
+                type: string
+                enum:
+                  - gtin
+              value:
+                description: значение (обязательный)
+                type: string
+              level:
+                description: >
+                  тип упаковки (обязательный) Возможные значения
+                  trade-unit — штука
+                  box — коробка
+                  layer — слой на палете
+                  pallet — палета
+                  metro-unit — метро-юнит
+                  show-pack — шоу-пак
+                  inner-pack — спайка
+                  Примечание. для всех типов упаковки, кроме trade-unit,
+                  должны быть указаны:
+                    attr_id — идентификатор атрибута (значение - 13763)
+                    attr_value — значение атрибута: GTIN вложения в упаковку.
+                    Указывается GTIN упаковки предыдущего уровня
+                type: string
+                enum:
+                  - trade-unit
+                  - box
+                  - layer
+                  - pallet
+                  - metro-unit
+                  - show-pack
+                  - inner-pack
+              multiplier:
+                description: количество в упаковке (обязательный)
+                type: integer
+              party_id:
+                description: >
+                  идентификатор торговой сети (необязательный) при типе gtin,
+                  (обязательный) при других типах
+                type: string
+              unit:
+                description: >
+                  тип измерений (необязательный) Возможные значения
+                    кг — килограмм
+                    шт — штука
+                type: string
+                enum:
+                  - кг
+                  - шт
+        categories:
+          description: массив идентификаторов категорий
+          type: array
+          items:
+            type: integer
+        good_attrs:
+          description: массив атрибутов (необязательный)
+          type: object
+          properties:
+            attr_id:
+              description: >
+                идентификатора атрибута (обязательный при создании
+                товара)
+              type: integer
+            attr_value:
+              description: >
+                значение атрибута (обязательный при создании товара;
+                необязательный при редактировании и удалении)
+              type: string
+            attr_value_type:
+              description: тип значение атрибута (необязательный)
+              type: string
+            gtin:
+              description: значение gtin (необязательный)
+              type: string
+            delete:
+              description: >
+                со значением 1 - удаление атрибута товара (необязательный).
+                Доступно только при редактировании существующего товара.
+                При передаче данного параметра, обязательно указать attr_value_id
+              type: integer
+        good_images:
+          description: массив изображений (необязательный)
+          type: array
+          items:
+            type: object
+            properties:
+              photo_type:
+                description: >
+                  тип изображения (обязательный). Возможные значения
+                  default — фотография по умолчанию (вид спереди)
+                  facing — crop-фотография для планограмм (обрезанная по контуру
+                  товара)
+                  7 — фотография товара слева
+                  19 — фотография товара справа
+                  13 — фотография товара сзади
+                  si1 — фотография товара сверху
+                  si2 — фотография товара снизу
+                  si3 — фотография товара в упаковке
+                  si4 — фотография товара без упаковки
+                  si5 — фотография товара внутри упаковки
+                  3ds — 3D серия
+                  marketing — коммерческая фотография товара
+                  text — фотография текста на товаре
+                  ecommerce — e-commerce фото
+                  undef — single shot, фотография товара с не предопределенного
+                  ракурса
+                  cubi — (опционально) фотография измерения ВГХ
+                enum:
+                  - default
+                  - facing
+                  - "7"
+                  - "19"
+                  - "13"
+                  - si1
+                  - si2
+                  - si3
+                  - si4
+                  - si5
+                  - 3ds
+                  - marketing
+                  - text
+                  - ecommerce
+                  - undef
+                  - cubi
+                type: string
+              photo_url:
+                description: >
+                  url, либо массив url при типе 3ds (обязательный).
+                  Ссылки на фотографии с редиректом не поддерживаются
+                type: array
+                items:
+                  type: string
+              identifier:
+                description: >
+                  значение gtin/sku/ltin/barcode (необязательный).
+                  Используется для связи фотографий с идентификаторами товара
+                type: string
+                enum:
+                  - gtin
+                  - sku
+                  - ltin
+                  - barcode
+              identifier_type:
+                description: >
+                  тип идентификатора (обязательный, если передан identifier).
+                  Возможные значения gtin
+                type: string
+                enum:
+                  - gtin
+              identifier_party_id:
+                description: >
+                  идентификатор торговой сети (необязательный при типе gtin;
+                  обязательный при других типах)
+                type: string
+
+    FeedResponse:
+      properties:
+        apiversion:
+          type: integer
+        result:
+          type: object
+          properties:
+            feed_id:
+              description: идентификатор фида
+              type: integer
+
+    FeedStatusResponse:
+      properties:
+        apiversion:
+          type: integer
+        result:
+          type: object
+          properties:
+            feed_id:
+              description: идентификатор фида
+              type: integer
+            status_id:
+              description: >
+                идентификатор статуса фида, возможные варианты
+                0 — запрос не принят
+                1 — запрос получен, данные на модерации
+                2 — товары прошли модерацию
+                3 — одобренные модератором товары подписаны
+              type: integer
+              enum: [ 0, 1, 2, 3 ]
+            status:
+              description:
+                статус фида, возможные варианты
+                Rejected — запрос не принят
+                Received — запрос получен, данные на модерации
+                Moderated — товары прошли модерацию
+                Signed — одобренные модератором товары подписаны
+              type: string
+              enum:
+                - Rejected
+                - Received
+                - Moderated
+                - Signed
+            received_at:
+              description: время создания фида
+              type: string
+              example: 2019-08-13T17:03:40Z
+            status_updated_at:
+              description: время перехода фида в текущий статус
+              type: string
+              example: 2019-08-13T17:03:40Z
+            result:
+              type: object
+              example: >
+                {
+                  "0": [
+                    "GTIN 4600002576143 используется другим товаром"
+                  ],
+                  "totalErrors":"1",
+                  "commonError":""
+                }
+            item:
+              type: array
+              items:
+                type: object
+                properties:
+                  gtin:
+                    description: глобальный штрих-код к которому относится сообщение. Если связанного штрих-кода нет, то значение null
+                    type: string
+                  good_id:
+                    description: идентификатор товара в каталоге, к которому относится сообщение. Если связанног товара нет, то значение null
+                    type: string
+                  attribute_id:
+                    description: идентификатор атрибута в каталоге, к которому относится сообщение. Если связанного атрибута нет, то значение nul
+                    type: string
+                  attribute_name:
+                    description: название атрибута в каталоге, к которому относится сообщение. Значение может не передаваться
+                    type: string
+                  status_code:
+                    description: числовой код ошибки
+                    type: integer
+                  status_message:
+                    description: текст статуса
+                    type: string
+                  message:
+                    description: текст сообщения
+                    type: string
+
+    FeedProductDocumentRequest:
+      properties:
+        goodIds:
+          description: массив ID товаров
+          type: array
+          items:
+            type: integer
+        gtins:
+          description: массив строк GTIN
+          type: array
+          items:
+            type: string
+        publicationAgreement:
+          description: >
+            согласны ли Вы на публикацию товаров на сайте национальный-каталог.рф
+            (true/1 - согласны, false/0 - не согласны).
+            При отсутствии данного параметра будет выставлено значение
+            по умолчанию - "Не согласен".
+          type: boolean
+
+    FeedProductDocumentResponse:
+      properties:
+        apiversion:
+          type: integer
+        result:
+          type: object
+          properties:
+            xmls:
+              description: массив объектов
+              type: array
+              items:
+                type: object
+                properties:
+                  goodId:
+                    description: ID товара
+                    type: integer
+                  xml:
+                    description: XML товара для подписания
+                    type: string
+            errors:
+              description: массив объектов
+              type: array
+              items:
+                type: object
+                properties:
+                  goodId:
+                    description: ID товара
+                    type: integer
+                  message:
+                    description: текст ошибки
+                    type: string
+                  GTIN:
+                    description: GTIN товара
+                    type: string
+
+    FeedProductSignPkcsRequest:
+      properties:
+        goodId:
+          description: идентификатор товара в каталоге
+          type: integer
+        base64Xml:
+          description: карточка товара в формате XML, закодированная в base64
+          type: string
+        signature:
+          description: >
+            открепленная подпись, закодированная в base64 соответствующая типу
+            CAdES в формате pkcs7
+          type: string
+
+    FeedProductSignPkcsResponse:
+      properties:
+        apiversion:
+          type: integer
+        result:
+          type: object
+          properties:
+            signed:
+              description: >
+                массив числовых идентификаторов товаров для которых прошла валидация и
+                проверка самой карточки товара, товар переведен в статус "Опубликован"
+              type: array
+              items:
+                type: integer
+            errors:
+              description: >
+                массив объектов, содержащих идентификаторы товара и текст ошибки,
+                возникшей при обработке переданных XML (закодированных в base64)
+              type: array
+              items:
+                type: object
+                properties:
+                  goodId:
+                    description: ID товара
+                    type: integer
+                  message:
+                    description: текст ошибки
+                    type: string

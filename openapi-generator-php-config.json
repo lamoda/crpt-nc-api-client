@@ -1,0 +1,5 @@
+{
+  "invokerPackage": "Lamoda\\CrptNcApiClient",
+  "srcBasePath": "src",
+  "variableNamingConvention": "camelCase"
+}
